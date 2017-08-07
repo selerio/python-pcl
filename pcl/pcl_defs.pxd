@@ -9,12 +9,21 @@ from vector cimport vector as vector2
 
 cdef extern from "Eigen/Eigen" namespace "Eigen" nogil:
     cdef cppclass Vector4f:
+        Vector4f()
+        Vector4f(float, float, float, float)
         float *data()
+
+    cdef cppclass Vector3f:
+        Vector3f()
+        Vector3f(float, float, float)
+        float *data()
+
     cdef cppclass Quaternionf:
         float w()
         float x()
         float y()
         float z()
+
     cdef cppclass aligned_allocator[T]:
         pass
 
@@ -78,6 +87,9 @@ cdef extern from "pcl/segmentation/sac_segmentation.h" namespace "pcl":
         void setMethodType (int)
         void setDistanceThreshold (float)
         void setInputCloud (shared_ptr[PointCloud[T]])
+        void setAxis(Vector3f)
+        Vector3f getAxis()
+        void setEpsAngle (double ea)
         void segment (PointIndices, ModelCoefficients)
 
 ctypedef SACSegmentation[PointXYZ] SACSegmentation_t
@@ -224,6 +236,18 @@ cdef extern from "pcl/filters/passthrough.h" namespace "pcl":
         void filter(PointCloud[T] c)
 
 ctypedef PassThrough[PointXYZ] PassThrough_t
+
+cdef extern from "pcl/filters/crop_box.h" namespace "pcl":
+    cdef cppclass CropBox[T]:
+        CropBox()
+        void setMin (Vector4f min_pt)
+        void setMax (Vector4f max_pt)
+        void setInputCloud (shared_ptr[PointCloud[T]])
+        void setIndices(shared_ptr[vector[int]] indices)
+        void filter(PointCloud[T] c)
+        void filter(vector[int] v)
+
+ctypedef CropBox[PointXYZ] CropBox_t
 
 cdef extern from "pcl/kdtree/kdtree_flann.h" namespace "pcl":
     cdef cppclass KdTreeFLANN[T]:

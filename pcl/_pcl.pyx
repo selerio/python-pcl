@@ -77,12 +77,31 @@ cdef class Segmentation:
 
     def set_optimize_coefficients(self, bool b):
         self.me.setOptimizeCoefficients(b)
+
     def set_model_type(self, cpp.SacModel m):
         self.me.setModelType(m)
+
     def set_method_type(self, int m):
         self.me.setMethodType (m)
+
     def set_distance_threshold(self, float d):
         self.me.setDistanceThreshold (d)
+
+    def set_eps_angle(self, double ea):
+        self.me.setEpsAngle (ea)
+
+    def set_axis(self, double ax, double ay, double az):
+        cdef cpp.Vector3f vec = cpp.Vector3f(0.0, 0.0, 0.0)
+        cdef float *data = vec.data()
+        data[0] = ax
+        data[1] = ay
+        data[2] = az
+        self.me.setAxis(vec)
+
+    def get_axis(self):
+        cdef cpp.Vector3f vec = self.me.getAxis()
+        cdef float *data = vec.data()
+        return [data[0], data[1], data[2]]
 
 #yeah, I can't be bothered making this inherit from SACSegmentation, I forget the rules
 #for how this works in cython templated extension types anyway
@@ -409,6 +428,15 @@ cdef class PointCloud:
         cfil.setInputCloud(self.thisptr_shared)
         return fil
 
+    def make_crop_box_filter(self):
+        """
+        Return a pcl.CropBoxFilter object with this object set as the input-cloud
+        """
+        fil = CropBoxFilter()
+        cdef cpp.CropBox_t *cfil = <cpp.CropBox_t *>fil.me
+        cfil.setInputCloud(self.thisptr_shared)
+        return fil
+
     def make_moving_least_squares(self):
         """
         Return a pcl.MovingLeastSquares object with this object as input cloud.
@@ -602,6 +630,57 @@ cdef class PassThroughFilter:
         cdef PointCloud pc = PointCloud()
         self.me.filter(pc.thisptr()[0])
         return pc
+
+cdef class CropBoxFilter:
+    """
+    filter points in a 3d box
+    """
+    cdef cpp.CropBox_t *me
+    def __cinit__(self):
+        self.me = new cpp.CropBox_t()
+
+    def __dealloc__(self):
+        del self.me
+
+    def set_min(self, cnp.ndarray[ndim=1, dtype=float, mode='c'] min_pt):
+        cdef cpp.Vector4f vec = cpp.Vector4f(0.0, 0.0, 0.0, 0.0)
+        cdef float *data = vec.data()
+        data[0] = min_pt[0]
+        data[1] = min_pt[1]
+        data[2] = min_pt[2]
+        data[3] = min_pt[3]
+        self.me.setMin(vec)
+
+    def set_max(self, cnp.ndarray[ndim=1, dtype=float, mode='c'] max_pt):
+        cdef cpp.Vector4f vec = cpp.Vector4f(0.0, 0.0, 0.0, 0.0)
+        cdef float *data = vec.data()
+        data[0] = max_pt[0]
+        data[1] = max_pt[1]
+        data[2] = max_pt[2]
+        data[3] = max_pt[3]
+        self.me.setMax(vec)
+
+    def set_indices(self, pyindices):
+        cdef vector[int] indices
+        for i in pyindices:
+            indices.push_back(i)
+        self.me.setIndices(cpp.shared_ptr[vector[int]](&indices))
+
+    def filter_indices(self):
+        cdef vector[int] filtered_indices
+        self.me.filter(filtered_indices)
+
+        cdef cnp.ndarray[int, ndim=1] ind = np.zeros(filtered_indices.size(), dtype=np.int32)
+        for i in range(ind.shape[0]):
+            ind[i] = filtered_indices[i]
+
+        return ind
+
+    def filter(self):
+        cdef PointCloud pc = PointCloud()
+        self.me.filter(pc.thisptr()[0])
+        return pc
+
 
 cdef class KdTreeFLANN:
     """
