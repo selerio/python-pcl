@@ -32,7 +32,10 @@ pcl_libs = ["pcl_%s%s" % (lib, pcl_version) for lib in pcl_libs]
 
 ext_args = defaultdict(list)
 ext_args['include_dirs'].append(numpy.get_include())
-ext_args['include_dirs'].append('/usr/local/Cellar/boost/1.64.0_1/include/')
+if platform.system() == "Darwin":
+    ext_args['include_dirs'].append('/usr/local/Cellar/boost/1.64.0_1/include/')
+elif platform.system() == "Linux":
+    ext_args['include_dirs'].append('/usr/include/boost')
 
 def pkgconfig(flag):
     # Equivalent in Python 2.7 (but not 2.6):
